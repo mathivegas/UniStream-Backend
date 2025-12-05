@@ -190,7 +190,7 @@ router.put("/spectators/me/points", verifyToken, async (req, res) => {
         }
 
         await pool.query(
-            'UPDATE spectatorstreamerProgress SET points = ?, level = ?, updatedAt = ? WHERE spectatorId = ? AND streamerId = ?',
+            'UPDATE spectatorstreamerprogress SET points = ?, level = ?, updatedAt = ? WHERE spectatorId = ? AND streamerId = ?',
             [newPoints, newLevel, new Date(), userId, streamerId]
         );
 
