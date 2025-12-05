@@ -22,7 +22,7 @@ router.post("/auth/register", async (req, res) => {
         }
 
         // Seleccionar la tabla según el tipo
-        const tableName = type === "spectator" ? "Spectators" : "Streamers";
+        const tableName = type === "spectator" ? "spectators" : "streamers";
 
         // Verificar si el email ya existe
         const [existingUsers] = await pool.query(
@@ -87,7 +87,7 @@ router.post("/auth/login", async (req, res) => {
         }
 
         // Seleccionar la tabla según el tipo
-        const tableName = type === "spectator" ? "Spectators" : "Streamers";
+        const tableName = type === "spectator" ? "spectators" : "streamers";
 
         // Buscar el usuario
         const [users] = await pool.query(
