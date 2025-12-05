@@ -48,15 +48,24 @@ router.delete("/gifts/:giftId", verifyToken, async (req, res) => {
         const { giftId } = req.params;
         const streamerId = req.user.id;
 
+        console.log('🗑️ DELETE /gifts/:giftId - giftId:', giftId, 'streamerId:', streamerId);
+
         // Verificar que el regalo pertenece al streamer
         const [gifts] = await pool.query('SELECT * FROM gifts WHERE id = ? AND streamerId = ?', [giftId, streamerId]);
+        console.log('📦 Regalos encontrados:', gifts.length);
+        
         if (gifts.length === 0) {
+            console.log('❌ Regalo no encontrado o sin permiso');
             return res.status(404).json({ message: "Regalo no encontrado o no tienes permiso para eliminarlo" });
         }
 
+        console.log('🔄 Eliminando regalo...');
         await pool.query('DELETE FROM gifts WHERE id = ?', [giftId]);
+        console.log('✅ Regalo eliminado exitosamente');
         res.status(200).json({ message: "Regalo eliminado exitosamente" });
     } catch (error) {
+        console.error('❌ Error al eliminar regalo:', error);
+        console.error('Stack trace:', error.stack);
         res.status(500).json({ message: "Error al eliminar regalo", error: error.message });
     }
 });
@@ -360,8 +369,8 @@ router.get("/gifts/history/:userId", verifyToken, async (req, res) => {
                 g.emoji AS giftEmoji,
                 g.points AS giftPoints
             FROM transactions t
-            LEFT JOIN Spectators s ON t.senderId = s.id
-            LEFT JOIN Gifts g ON t.giftId = g.id
+            LEFT JOIN spectators s ON t.senderId = s.id
+            LEFT JOIN gifts g ON t.giftId = g.id
             WHERE t.receiverId = ? AND t.type = ?
             ORDER BY t.createdAt DESC
             LIMIT 50`,
