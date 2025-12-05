@@ -46,8 +46,8 @@ npm install
 3. **Crear archivo `.env`:**
 
 ```env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/UniDB
-JWT_SECRET=clave_secreta
+DATABASE_URL=mysql://mysql:password@localhost:5432/db
+JWT_SECRET=clave
 PORT=3000
 NODE_ENV=development
 ```
