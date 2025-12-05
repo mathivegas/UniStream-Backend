@@ -42,6 +42,42 @@ router.post("/gifts", verifyToken, async (req, res) => {
     }
 });
 
+// ========== ACTUALIZAR REGALO (STREAMER) ==========
+router.put("/gifts/:giftId", verifyToken, async (req, res) => {
+    try {
+        const { giftId } = req.params;
+        const { name, emoji, cost, points, description } = req.body;
+        const streamerId = req.user.id;
+
+        console.log('✏️ PUT /gifts/:giftId - giftId:', giftId, 'streamerId:', streamerId);
+
+        // Verificar que el regalo pertenece al streamer
+        const [gifts] = await pool.query('SELECT * FROM gifts WHERE id = ? AND streamerId = ?', [giftId, streamerId]);
+        
+        if (gifts.length === 0) {
+            console.log('❌ Regalo no encontrado o sin permiso');
+            return res.status(404).json({ message: "Regalo no encontrado o no tienes permiso para editarlo" });
+        }
+
+        if (!name || !emoji || !cost || !points) {
+            return res.status(400).json({ message: "Faltan campos requeridos: name, emoji, cost, points" });
+        }
+
+        const now = new Date();
+        await pool.query(
+            'UPDATE gifts SET name = ?, emoji = ?, cost = ?, points = ?, description = ?, updatedAt = ? WHERE id = ?',
+            [name, emoji, cost, points, description || '', now, giftId]
+        );
+
+        const [updatedGift] = await pool.query('SELECT * FROM gifts WHERE id = ?', [giftId]);
+        console.log('✅ Regalo actualizado exitosamente');
+        res.status(200).json(updatedGift[0]);
+    } catch (error) {
+        console.error('❌ Error al actualizar regalo:', error);
+        res.status(500).json({ message: "Error al actualizar regalo", error: error.message });
+    }
+});
+
 // ========== ELIMINAR REGALO (STREAMER) ==========
 router.delete("/gifts/:giftId", verifyToken, async (req, res) => {
     try {
