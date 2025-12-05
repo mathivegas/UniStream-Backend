@@ -24,9 +24,9 @@ API para la plataforma de streaming **UniStream**. Desarrollada para el curso de
 
 ### Prerrequisitos
 
-- Node.js v18 o superior
-- PostgreSQL instalado y corriendo
-- npm o yarn
+- Node.js v18
+- mySQL Server / Workbench
+- npm
 
 ### Pasos
 
