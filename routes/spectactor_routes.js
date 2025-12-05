@@ -59,6 +59,12 @@ router.delete("/gifts/:giftId", verifyToken, async (req, res) => {
             return res.status(404).json({ message: "Regalo no encontrado o no tienes permiso para eliminarlo" });
         }
 
+        // Primero eliminar todas las transacciones asociadas a este regalo
+        console.log('🔄 Eliminando transacciones relacionadas...');
+        const [deleteTransactionsResult] = await pool.query('DELETE FROM transactions WHERE giftId = ?', [giftId]);
+        console.log(`✅ ${deleteTransactionsResult.affectedRows} transacciones eliminadas`);
+
+        // Luego eliminar el regalo
         console.log('🔄 Eliminando regalo...');
         await pool.query('DELETE FROM gifts WHERE id = ?', [giftId]);
         console.log('✅ Regalo eliminado exitosamente');
