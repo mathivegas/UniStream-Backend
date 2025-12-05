@@ -8,7 +8,7 @@ const router = express.Router();
 router.get("/streamers", async (req, res) => {
     try {
         const [streamers] = await pool.query(
-            'SELECT id, name, email, avatar, bio, isLive, liveChannelName, liveStartedAt, level, points, hoursStreamed FROM Streamers ORDER BY isLive DESC'
+            'SELECT id, name, email, avatar, bio, isLive, liveChannelName, liveStartedAt, level, points, hoursStreamed FROM streamers ORDER BY isLive DESC'
         );
         res.status(200).json(streamers);
     } catch (error) {
@@ -20,7 +20,7 @@ router.get("/streamers", async (req, res) => {
 router.get("/streamers/live", async (req, res) => {
     try {
         const [liveStreamers] = await pool.query(
-            'SELECT id, name, email, avatar, bio, isLive, liveChannelName, liveStartedAt, level, points FROM Streamers WHERE isLive = ?',
+            'SELECT id, name, email, avatar, bio, isLive, liveChannelName, liveStartedAt, level, points FROM streamers WHERE isLive = ?',
             [true]
         );
         res.status(200).json(liveStreamers);
@@ -34,7 +34,7 @@ router.get("/streamers/:id", async (req, res) => {
     try {
         const { id } = req.params;
         const [streamers] = await pool.query(
-            'SELECT id, name, email, avatar, bio, isLive, liveChannelName, liveStartedAt, level, points, hoursStreamed, coins FROM Streamers WHERE id = ?',
+            'SELECT id, name, email, avatar, bio, isLive, liveChannelName, liveStartedAt, level, points, hoursStreamed, coins FROM streamers WHERE id = ?',
             [id]
         );
 
@@ -59,7 +59,7 @@ router.put("/streamers/:id", verifyToken, async (req, res) => {
             return res.status(403).json({ message: "No tienes permiso para editar este perfil" });
         }
 
-        const [streamers] = await pool.query('SELECT * FROM Streamers WHERE id = ?', [id]);
+        const [streamers] = await pool.query('SELECT * FROM streamers WHERE id = ?', [id]);
         if (streamers.length === 0) {
             return res.status(404).json({ message: "Streamer no encontrado" });
         }
@@ -87,12 +87,12 @@ router.put("/streamers/:id", verifyToken, async (req, res) => {
             values.push(id);
             
             await pool.query(
-                `UPDATE Streamers SET ${updates.join(', ')} WHERE id = ?`,
+                `UPDATE streamers SET ${updates.join(', ')} WHERE id = ?`,
                 values
             );
         }
 
-        const [updatedStreamer] = await pool.query('SELECT * FROM Streamers WHERE id = ?', [id]);
+        const [updatedStreamer] = await pool.query('SELECT * FROM streamers WHERE id = ?', [id]);
 
         res.json({
             message: "Perfil actualizado exitosamente",
@@ -108,18 +108,18 @@ router.post("/streams/start", verifyToken, async (req, res) => {
     try {
         const streamerId = req.user.id;
 
-        const [streamers] = await pool.query('SELECT * FROM Streamers WHERE id = ?', [streamerId]);
+        const [streamers] = await pool.query('SELECT * FROM streamers WHERE id = ?', [streamerId]);
         if (streamers.length === 0) {
             return res.status(404).json({ message: "Streamer no encontrado" });
         }
 
         // Marcar como en vivo
         await pool.query(
-            'UPDATE Streamers SET isLive = ?, updatedAt = ? WHERE id = ?',
+            'UPDATE streamers SET isLive = ?, updatedAt = ? WHERE id = ?',
             [true, new Date(), streamerId]
         );
 
-        const [updatedStreamer] = await pool.query('SELECT * FROM Streamers WHERE id = ?', [streamerId]);
+        const [updatedStreamer] = await pool.query('SELECT * FROM streamers WHERE id = ?', [streamerId]);
 
         res.json({
             message: "Transmisión iniciada",
@@ -136,7 +136,7 @@ router.post("/streams/end", verifyToken, async (req, res) => {
         const { hoursStreamed } = req.body;
         const streamerId = req.user.id;
 
-        const [streamers] = await pool.query('SELECT * FROM Streamers WHERE id = ?', [streamerId]);
+        const [streamers] = await pool.query('SELECT * FROM streamers WHERE id = ?', [streamerId]);
         if (streamers.length === 0) {
             return res.status(404).json({ message: "Streamer no encontrado" });
         }
@@ -155,11 +155,11 @@ router.post("/streams/end", verifyToken, async (req, res) => {
 
         // Marcar como no en vivo
         await pool.query(
-            'UPDATE Streamers SET isLive = ?, hoursStreamed = ?, points = ?, level = ?, updatedAt = ? WHERE id = ?',
+            'UPDATE streamers SET isLive = ?, hoursStreamed = ?, points = ?, level = ?, updatedAt = ? WHERE id = ?',
             [false, newHours, newPoints, newLevel, new Date(), streamerId]
         );
 
-        const [updatedStreamer] = await pool.query('SELECT * FROM Streamers WHERE id = ?', [streamerId]);
+        const [updatedStreamer] = await pool.query('SELECT * FROM streamers WHERE id = ?', [streamerId]);
 
         res.json({
             message: "Transmisión finalizada",
@@ -176,7 +176,7 @@ router.get("/streamers/:id/stats", async (req, res) => {
         const { id } = req.params;
 
         const [streamers] = await pool.query(
-            'SELECT name, level, points, hoursStreamed, coins, isLive FROM Streamers WHERE id = ?',
+            'SELECT name, level, points, hoursStreamed, coins, isLive FROM streamers WHERE id = ?',
             [id]
         );
 
@@ -208,7 +208,7 @@ router.put("/streamers/:id/hours", verifyToken, async (req, res) => {
             return res.status(403).json({ message: "No autorizado" });
         }
 
-        const [streamers] = await pool.query('SELECT * FROM Streamers WHERE id = ?', [id]);
+        const [streamers] = await pool.query('SELECT * FROM streamers WHERE id = ?', [id]);
         if (streamers.length === 0) {
             return res.status(404).json({ message: "Streamer no encontrado" });
         }
@@ -237,7 +237,7 @@ router.put("/streamers/:id/hours", verifyToken, async (req, res) => {
         });
 
         await pool.query(
-            'UPDATE Streamers SET hoursStreamed = ?, level = ?, updatedAt = ? WHERE id = ?',
+            'UPDATE streamers SET hoursStreamed = ?, level = ?, updatedAt = ? WHERE id = ?',
             [newHours, finalLevel, new Date(), id]
         );
 
@@ -261,7 +261,7 @@ router.put("/streamers/:id/points", verifyToken, async (req, res) => {
             return res.status(403).json({ message: "No autorizado" });
         }
 
-        const [streamers] = await pool.query('SELECT * FROM Streamers WHERE id = ?', [id]);
+        const [streamers] = await pool.query('SELECT * FROM streamers WHERE id = ?', [id]);
         if (streamers.length === 0) {
             return res.status(404).json({ message: "Streamer no encontrado" });
         }
@@ -274,7 +274,7 @@ router.put("/streamers/:id/points", verifyToken, async (req, res) => {
         const finalLevel = Math.max(streamer.level, newLevel);
 
         await pool.query(
-            'UPDATE Streamers SET points = ?, level = ?, updatedAt = ? WHERE id = ?',
+            'UPDATE streamers SET points = ?, level = ?, updatedAt = ? WHERE id = ?',
             [newPoints, finalLevel, new Date(), id]
         );
 

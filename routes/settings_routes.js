@@ -7,7 +7,7 @@ const router = express.Router();
 // ========== OBTENER TODAS LAS CONFIGURACIONES ==========
 router.get('/settings', async (req, res) => {
     try {
-        const [settings] = await pool.query('SELECT * FROM Settings');
+        const [settings] = await pool.query('SELECT * FROM settings');
         
         // Convertir array a objeto key-value
         const settingsObj = {};
@@ -31,7 +31,7 @@ router.get('/settings/:key', async (req, res) => {
     try {
         const { key } = req.params;
         const [settings] = await pool.query(
-            'SELECT * FROM Settings WHERE settingKey = ?',
+            'SELECT * FROM settings WHERE settingKey = ?',
             [key]
         );
 
@@ -60,7 +60,7 @@ router.put('/settings/:key', verifyToken, async (req, res) => {
         }
 
         const [result] = await pool.query(
-            'UPDATE Settings SET settingValue = ?, updatedAt = NOW() WHERE settingKey = ?',
+            'UPDATE settings SET settingValue = ?, updatedAt = NOW() WHERE settingKey = ?',
             [value, key]
         );
 
@@ -69,7 +69,7 @@ router.put('/settings/:key', verifyToken, async (req, res) => {
         }
 
         const [updated] = await pool.query(
-            'SELECT * FROM Settings WHERE settingKey = ?',
+            'SELECT * FROM settings WHERE settingKey = ?',
             [key]
         );
 

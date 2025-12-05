@@ -9,7 +9,7 @@ const router = express.Router();
 router.get("/streamers", async (req, res) => {
     try {
         const [streamers] = await pool.query(
-            'SELECT id, name, email, avatar, bio, isLive, liveChannelName, liveStartedAt, level, points FROM Streamers'
+            'SELECT id, name, email, avatar, bio, isLive, liveChannelName, liveStartedAt, level, points FROM streamers'
         );
         res.status(200).json(streamers);
     } catch (error) {
@@ -31,11 +31,11 @@ router.post("/gifts", verifyToken, async (req, res) => {
         const now = new Date();
 
         await pool.query(
-            'INSERT INTO Gifts (id, streamerId, name, emoji, cost, points, description, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO gifts (id, streamerId, name, emoji, cost, points, description, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [giftId, streamerId, name, emoji, cost, points, description || '', now, now]
         );
 
-        const [newGift] = await pool.query('SELECT * FROM Gifts WHERE id = ?', [giftId]);
+        const [newGift] = await pool.query('SELECT * FROM gifts WHERE id = ?', [giftId]);
         res.status(201).json(newGift[0]);
     } catch (error) {
         res.status(500).json({ message: "Error al crear regalo", error: error.message });
@@ -49,12 +49,12 @@ router.delete("/gifts/:giftId", verifyToken, async (req, res) => {
         const streamerId = req.user.id;
 
         // Verificar que el regalo pertenece al streamer
-        const [gifts] = await pool.query('SELECT * FROM Gifts WHERE id = ? AND streamerId = ?', [giftId, streamerId]);
+        const [gifts] = await pool.query('SELECT * FROM gifts WHERE id = ? AND streamerId = ?', [giftId, streamerId]);
         if (gifts.length === 0) {
             return res.status(404).json({ message: "Regalo no encontrado o no tienes permiso para eliminarlo" });
         }
 
-        await pool.query('DELETE FROM Gifts WHERE id = ?', [giftId]);
+        await pool.query('DELETE FROM gifts WHERE id = ?', [giftId]);
         res.status(200).json({ message: "Regalo eliminado exitosamente" });
     } catch (error) {
         res.status(500).json({ message: "Error al eliminar regalo", error: error.message });
@@ -66,7 +66,7 @@ router.get("/gifts/:streamerId", async (req, res) => {
     try {
         const { streamerId } = req.params;
         const [gifts] = await pool.query(
-            'SELECT id, name, emoji, cost, points, description FROM Gifts WHERE streamerId = ? ORDER BY cost ASC',
+            'SELECT id, name, emoji, cost, points, description FROM gifts WHERE streamerId = ? ORDER BY cost ASC',
             [streamerId]
         );
         res.status(200).json(gifts);
@@ -79,7 +79,7 @@ router.get("/gifts/:streamerId", async (req, res) => {
 router.get("/gifts", async (req, res) => {
     try {
         const [gifts] = await pool.query(
-            'SELECT id, name, emoji, cost, points, description, streamerId FROM Gifts ORDER BY cost ASC'
+            'SELECT id, name, emoji, cost, points, description, streamerId FROM gifts ORDER BY cost ASC'
         );
         res.status(200).json(gifts);
     } catch (error) {
@@ -91,7 +91,7 @@ router.get("/gifts", async (req, res) => {
 router.get("/spectators", async (req, res) => {
     try {
         const [spectators] = await pool.query(
-            'SELECT id, name, email, coins, points, level, avatar, bio, createdAt, updatedAt FROM Spectators'
+            'SELECT id, name, email, coins, points, level, avatar, bio, createdAt, updatedAt FROM spectators'
         );
         res.status(200).json(spectators);
     } catch (error) {
@@ -108,7 +108,7 @@ router.get("/spectators/me", verifyToken, async (req, res) => {
 
         // Solo retornar datos globales (coins). Points y level son per-streamer (SpectatorStreamerProgress)
         let [spectators] = await pool.query(
-            'SELECT id, name, email, coins FROM Spectators WHERE id = ?',
+            'SELECT id, name, email, coins FROM spectators WHERE id = ?',
             [userId]
         );
 
@@ -119,12 +119,12 @@ router.get("/spectators/me", verifyToken, async (req, res) => {
             console.log('➕ Creando nuevo espectador:', { userId, email });
             
             await pool.query(
-                'INSERT INTO Spectators (id, name, email, coins, points, level, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO spectators (id, name, email, coins, points, level, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [userId, email.split('@')[0], email, 0, 0, 1, now, now]
             );
 
             [spectators] = await pool.query(
-                'SELECT id, name, email, coins FROM Spectators WHERE id = ?',
+                'SELECT id, name, email, coins FROM spectators WHERE id = ?',
                 [userId]
             );
         }
@@ -151,7 +151,7 @@ router.put("/spectators/me/points", verifyToken, async (req, res) => {
 
         // Obtener o crear progreso para este espectador con este streamer
         let [progress] = await pool.query(
-            'SELECT points, level FROM SpectatorStreamerProgress WHERE spectatorId = ? AND streamerId = ?',
+            'SELECT points, level FROM spectatorstreamerprogress WHERE spectatorId = ? AND streamerId = ?',
             [userId, streamerId]
         );
 
@@ -159,7 +159,7 @@ router.put("/spectators/me/points", verifyToken, async (req, res) => {
         if (progress.length === 0) {
             // Crear nuevo registro de progreso
             await pool.query(
-                'INSERT INTO SpectatorStreamerProgress (spectatorId, streamerId, points, level) VALUES (?, ?, 0, 1)',
+                'INSERT INTO spectatorstreamerprogress (spectatorId, streamerId, points, level) VALUES (?, ?, 0, 1)',
                 [userId, streamerId]
             );
             currentPoints = 0;
@@ -172,7 +172,7 @@ router.put("/spectators/me/points", verifyToken, async (req, res) => {
         // Calculate level based on streamer's custom levels
         let newLevel = 1;
         const [levels] = await pool.query(
-            'SELECT levelNumber, requiredPoints FROM Levels WHERE streamerId = ? ORDER BY requiredPoints DESC',
+            'SELECT levelNumber, requiredPoints FROM levels WHERE streamerId = ? ORDER BY requiredPoints DESC',
             [streamerId]
         );
         
@@ -190,7 +190,7 @@ router.put("/spectators/me/points", verifyToken, async (req, res) => {
         }
 
         await pool.query(
-            'UPDATE SpectatorStreamerProgress SET points = ?, level = ?, updatedAt = ? WHERE spectatorId = ? AND streamerId = ?',
+            'UPDATE spectatorstreamerProgress SET points = ?, level = ?, updatedAt = ? WHERE spectatorId = ? AND streamerId = ?',
             [newPoints, newLevel, new Date(), userId, streamerId]
         );
 
@@ -209,7 +209,7 @@ router.get("/spectators/me/progress/:streamerId", verifyToken, async (req, res) 
         const { streamerId } = req.params;
 
         const [progress] = await pool.query(
-            'SELECT points, level FROM SpectatorStreamerProgress WHERE spectatorId = ? AND streamerId = ?',
+            'SELECT points, level FROM spectatorstreamerprogress WHERE spectatorId = ? AND streamerId = ?',
             [userId, streamerId]
         );
 
@@ -230,7 +230,7 @@ router.get("/spectators/:id", async (req, res) => {
     try {
         const { id } = req.params;
         const [spectators] = await pool.query(
-            'SELECT id, name, email, coins, points, level, avatar, bio, createdAt, updatedAt FROM Spectators WHERE id = ?',
+            'SELECT id, name, email, coins, points, level, avatar, bio, createdAt, updatedAt FROM spectators WHERE id = ?',
             [id]
         );
 
@@ -269,12 +269,12 @@ router.put("/spectators/:id", verifyToken, async (req, res) => {
         values.push(id);
 
         await pool.query(
-            `UPDATE Spectators SET ${updates.join(', ')}, updatedAt = ? WHERE id = ?`,
+            `UPDATE spectators SET ${updates.join(', ')}, updatedAt = ? WHERE id = ?`,
             values
         );
 
         const [updated] = await pool.query(
-            'SELECT id, name, email, coins, points, level, avatar, bio FROM Spectators WHERE id = ?',
+            'SELECT id, name, email, coins, points, level, avatar, bio FROM spectators WHERE id = ?',
             [id]
         );
 
@@ -294,13 +294,13 @@ router.post("/gifts/send", verifyToken, async (req, res) => {
             return res.status(400).json({ message: "Faltan receiverId o giftId" });
         }
 
-        const [gifts] = await pool.query('SELECT * FROM Gifts WHERE id = ?', [giftId]);
+        const [gifts] = await pool.query('SELECT * FROM gifts WHERE id = ?', [giftId]);
         if (gifts.length === 0) {
             return res.status(404).json({ message: "Regalo no encontrado" });
         }
         const gift = gifts[0];
 
-        const [senders] = await pool.query('SELECT * FROM Spectators WHERE id = ?', [senderId]);
+        const [senders] = await pool.query('SELECT * FROM spectators WHERE id = ?', [senderId]);
         if (senders.length === 0) {
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
@@ -313,25 +313,25 @@ router.post("/gifts/send", verifyToken, async (req, res) => {
         }
 
         await pool.query(
-            'UPDATE Spectators SET coins = coins - ?, updatedAt = ? WHERE id = ?',
+            'UPDATE spectators SET coins = coins - ?, updatedAt = ? WHERE id = ?',
             [totalCost, new Date(), senderId]
         );
 
         const pointsToAdd = gift.points * amount;
         await pool.query(
-            'UPDATE Streamers SET points = points + ?, level = FLOOR((points + ?) / 100) + 1, updatedAt = ? WHERE id = ?',
+            'UPDATE streamers SET points = points + ?, level = FLOOR((points + ?) / 100) + 1, updatedAt = ? WHERE id = ?',
             [pointsToAdd, pointsToAdd, new Date(), receiverId]
         );
 
         const transactionId = uuidv4();
         const now = new Date();
         await pool.query(
-            'INSERT INTO Transactions (id, senderId, receiverId, giftId, type, amount, description, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO transactions (id, senderId, receiverId, giftId, type, amount, description, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [transactionId, senderId, receiverId, giftId, 'gift_sent', totalCost, `Envió ${amount} ${gift.name}(s)`, now, now]
         );
 
-        const [updatedSender] = await pool.query('SELECT coins FROM Spectators WHERE id = ?', [senderId]);
-        const [updatedReceiver] = await pool.query('SELECT points, level FROM Streamers WHERE id = ?', [receiverId]);
+        const [updatedSender] = await pool.query('SELECT coins FROM spectators WHERE id = ?', [senderId]);
+        const [updatedReceiver] = await pool.query('SELECT points, level FROM streamers WHERE id = ?', [receiverId]);
 
         res.json({
             message: "Regalo enviado exitosamente",
@@ -359,7 +359,7 @@ router.get("/gifts/history/:userId", verifyToken, async (req, res) => {
                 g.name AS giftName, 
                 g.emoji AS giftEmoji,
                 g.points AS giftPoints
-            FROM Transactions t
+            FROM transactions t
             LEFT JOIN Spectators s ON t.senderId = s.id
             LEFT JOIN Gifts g ON t.giftId = g.id
             WHERE t.receiverId = ? AND t.type = ?
@@ -384,18 +384,18 @@ router.post("/coins/purchase", verifyToken, async (req, res) => {
         }
 
         await pool.query(
-            'UPDATE Spectators SET coins = coins + ?, updatedAt = ? WHERE id = ?',
+            'UPDATE spectators SET coins = coins + ?, updatedAt = ? WHERE id = ?',
             [coinAmount, new Date(), userId]
         );
 
         const purchaseId = uuidv4();
         const now = new Date();
         await pool.query(
-            'INSERT INTO Purchases (id, userId, coinAmount, price, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO purchases (id, userId, coinAmount, price, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [purchaseId, userId, coinAmount, price, 'completed', now, now]
         );
 
-        const [updated] = await pool.query('SELECT coins FROM Spectators WHERE id = ?', [userId]);
+        const [updated] = await pool.query('SELECT coins FROM spectators WHERE id = ?', [userId]);
 
         res.json({
             message: "Compra realizada exitosamente",
@@ -412,7 +412,7 @@ router.get("/coins/balance/:id", async (req, res) => {
     try {
         const { id } = req.params;
         const [spectators] = await pool.query(
-            'SELECT id, coins, points, level FROM Spectators WHERE id = ?',
+            'SELECT id, coins, points, level FROM spectators WHERE id = ?',
             [id]
         );
 
@@ -438,7 +438,7 @@ router.post("/streaming/start", verifyToken, async (req, res) => {
 
         const now = new Date();
         await pool.query(
-            'UPDATE Streamers SET isLive = ?, liveChannelName = ?, liveStartedAt = ?, updatedAt = ? WHERE id = ?',
+            'UPDATE streamers SET isLive = ?, liveChannelName = ?, liveStartedAt = ?, updatedAt = ? WHERE id = ?',
             [true, channelName, now, now, streamerId]
         );
 
@@ -458,7 +458,7 @@ router.post("/streaming/stop", verifyToken, async (req, res) => {
     try {
         const streamerId = req.user.id;
 
-        const [streamers] = await pool.query('SELECT liveStartedAt FROM Streamers WHERE id = ?', [streamerId]);
+        const [streamers] = await pool.query('SELECT liveStartedAt FROM streamers WHERE id = ?', [streamerId]);
         const startedAt = streamers[0]?.liveStartedAt;
 
         // Calcular horas transmitidas
@@ -470,7 +470,7 @@ router.post("/streaming/stop", verifyToken, async (req, res) => {
 
         const now = new Date();
         await pool.query(
-            'UPDATE Streamers SET isLive = ?, liveChannelName = NULL, liveStartedAt = NULL, hoursStreamed = hoursStreamed + ?, updatedAt = ? WHERE id = ?',
+            'UPDATE streamers SET isLive = ?, liveChannelName = NULL, liveStartedAt = NULL, hoursStreamed = hoursStreamed + ?, updatedAt = ? WHERE id = ?',
             [false, hoursStreamed, now, streamerId]
         );
 
@@ -488,7 +488,7 @@ router.post("/streaming/stop", verifyToken, async (req, res) => {
 router.get("/streaming/live", async (req, res) => {
     try {
         const [liveStreamers] = await pool.query(
-            'SELECT id, name, email, avatar, bio, isLive, liveChannelName, liveStartedAt, level, points FROM Streamers WHERE isLive = ?',
+            'SELECT id, name, email, avatar, bio, isLive, liveChannelName, liveStartedAt, level, points FROM streamers WHERE isLive = ?',
             [true]
         );
         res.json(liveStreamers);
@@ -503,7 +503,7 @@ router.get("/spectators/:email", verifyToken, async (req, res) => {
         const email = decodeURIComponent(req.params.email);
 
         let [spectators] = await pool.query(
-            'SELECT id, name, email, coins, points, level FROM Spectators WHERE email = ?',
+            'SELECT id, name, email, coins, points, level FROM spectators WHERE email = ?',
             [email]
         );
 
@@ -513,12 +513,12 @@ router.get("/spectators/:email", verifyToken, async (req, res) => {
             const now = new Date();
             
             await pool.query(
-                'INSERT INTO Spectators (id, name, email, coins, points, level, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO spectators (id, name, email, coins, points, level, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [newId, email.split('@')[0], email, 0, 0, 1, now, now]
             );
 
             [spectators] = await pool.query(
-                'SELECT id, name, email, coins, points, level FROM Spectators WHERE email = ?',
+                'SELECT id, name, email, coins, points, level FROM spectators WHERE email = ?',
                 [email]
             );
         }
@@ -535,7 +535,7 @@ router.put("/spectators/:email/points", verifyToken, async (req, res) => {
         const email = decodeURIComponent(req.params.email);
         const { pointsToAdd } = req.body;
 
-        const [spectators] = await pool.query('SELECT * FROM Spectators WHERE email = ?', [email]);
+        const [spectators] = await pool.query('SELECT * FROM spectators WHERE email = ?', [email]);
         if (spectators.length === 0) {
             return res.status(404).json({ message: "Espectador no encontrado" });
         }
@@ -547,7 +547,7 @@ router.put("/spectators/:email/points", verifyToken, async (req, res) => {
         const newLevel = Math.floor(newPoints / 50) + 1;
 
         await pool.query(
-            'UPDATE Spectators SET points = ?, level = ?, updatedAt = ? WHERE email = ?',
+            'UPDATE spectators SET points = ?, level = ?, updatedAt = ? WHERE email = ?',
             [newPoints, Math.max(spectator.level, newLevel), new Date(), email]
         );
 

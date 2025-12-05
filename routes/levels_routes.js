@@ -10,7 +10,7 @@ router.get('/:streamerId/levels', async (req, res) => {
         const { streamerId } = req.params;
         
         const [levels] = await pool.query(
-            'SELECT * FROM Levels WHERE streamerId = ? ORDER BY levelNumber ASC',
+            'SELECT * FROM levels WHERE streamerId = ? ORDER BY levelNumber ASC',
             [streamerId]
         );
         
@@ -38,7 +38,7 @@ router.post('/:streamerId/levels', verifyToken, async (req, res) => {
         }
         
         const [result] = await pool.query(
-            'INSERT INTO Levels (streamerId, levelNumber, levelName, requiredPoints) VALUES (?, ?, ?, ?)',
+            'INSERT INTO levels (streamerId, levelNumber, levelName, requiredPoints) VALUES (?, ?, ?, ?)',
             [streamerId, levelNumber, levelName, requiredPoints]
         );
         
@@ -75,7 +75,7 @@ router.put('/:streamerId/levels/:levelId', verifyToken, async (req, res) => {
         }
         
         const [result] = await pool.query(
-            'UPDATE Levels SET levelName = ?, requiredPoints = ? WHERE id = ? AND streamerId = ?',
+            'UPDATE levels SET levelName = ?, requiredPoints = ? WHERE id = ? AND streamerId = ?',
             [levelName, requiredPoints, levelId, streamerId]
         );
         
@@ -106,7 +106,7 @@ router.delete('/:streamerId/levels/:levelId', verifyToken, async (req, res) => {
         }
         
         const [result] = await pool.query(
-            'DELETE FROM Levels WHERE id = ? AND streamerId = ?',
+            'DELETE FROM levels WHERE id = ? AND streamerId = ?',
             [levelId, streamerId]
         );
         
