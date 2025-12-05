@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import config from "./config.js";
 import authRoutes from "./routes/auth_routes.js";
 import spectatorRoutes from "./routes/spectactor_routes.js";
 import streamerRoutes from "./routes/streamer_routes.js";
@@ -18,17 +19,19 @@ const httpServer = createServer(app);
 // CORS configurado para desarrollo y producción
 const allowedOrigins = [
     "http://localhost:3001",
-    process.env.FRONTEND_URL || "https://unistream-frontend.vercel.app"
+    "http://localhost:3000",
+    process.env.FRONTEND_URL || "https://uni-stream-frontend.vercel.app"
 ];
 
 const io = new Server(httpServer, {
     cors: {
         origin: allowedOrigins,
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST"],
+        credentials: true
     }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = config.server.port;
 
 app.use(cors({
     origin: function (origin, callback) {
@@ -39,7 +42,9 @@ app.use(cors({
         }
         return callback(null, true);
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -117,7 +122,20 @@ io.on("connection", (socket) => {
 
 // Ruta de prueba
 app.get("/", (req, res) => {
-    res.json({ message: "UniStream API está en línea 🚀" });
+    res.json({ 
+        message: "UniStream API está en línea 🚀",
+        environment: config.server.env,
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Health check
+app.get("/health", (req, res) => {
+    res.json({ 
+        status: "ok",
+        environment: config.server.env,
+        agora: config.agora.appId ? "configured" : "not-configured"
+    });
 });
 
 async function startServer() {
@@ -127,8 +145,10 @@ async function startServer() {
 
         httpServer.listen(PORT, () => {
             console.log(`✅ Servidor iniciado en puerto ${PORT}`);
-            console.log(`📍 Accede a http://localhost:${PORT}`);
+            console.log(`📍 Entorno: ${config.server.env}`);
+            console.log(`🌐 Frontend permitido: ${allowedOrigins.join(', ')}`);
             console.log(`🔌 Socket.io listo para conexiones en tiempo real`);
+            console.log(`📡 Agora App ID: ${config.agora.appId ? '✅ Configurado' : '❌ No configurado'}`);
         });
     } catch (error) {
         console.error("❌ Error al conectar a la base de datos:", error);
