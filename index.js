@@ -54,6 +54,10 @@ app.use("/api", streamerRoutes);
 app.use("/api", settingsRoutes);
 app.use("/api/streamers", levelsRoutes);
 
+// Mapa para rastrear espectadores en tiempo real
+// Estructura: { streamerId: [{ socketId, userId, userName, joinedAt }] }
+const activeViewers = new Map();
+
 // Configuración de Socket.io para chat en tiempo real
 io.on("connection", (socket) => {
     console.log(`✅ Socket conectado: ${socket.id}`);
@@ -62,9 +66,31 @@ io.on("connection", (socket) => {
     socket.on("join-chat", (data) => {
         const streamerId = typeof data === 'string' ? data : data.streamerId;
         const userName = typeof data === 'object' ? data.userName : 'Usuario';
+        const userId = typeof data === 'object' ? data.userId : null;
         
         socket.join(`chat_${streamerId}`);
-        console.log(`👤 ${userName} se unió al chat de ${streamerId}`);
+        socket.currentStreamerId = streamerId;
+        socket.viewerUserId = userId;
+        socket.viewerUserName = userName;
+        
+        // Agregar espectador a la lista
+        if (!activeViewers.has(streamerId)) {
+            activeViewers.set(streamerId, []);
+        }
+        const viewers = activeViewers.get(streamerId);
+        const existingViewer = viewers.find(v => v.socketId === socket.id);
+        if (!existingViewer) {
+            viewers.push({
+                socketId: socket.id,
+                userId: userId,
+                userName: userName,
+                joinedAt: new Date().toISOString()
+            });
+            console.log(`👤 ${userName} se unió al chat de ${streamerId} (${viewers.length} espectadores)`);
+            
+            // Notificar al streamer y espectadores sobre la lista actualizada
+            io.to(`chat_${streamerId}`).emit("viewers-updated", viewers);
+        }
     });
 
     // Enviar mensaje de chat
@@ -115,8 +141,34 @@ io.on("connection", (socket) => {
         socket.lastHeartbeat = timestamp;
     });
 
+    // Obtener lista de espectadores
+    socket.on("get-viewers", (streamerId) => {
+        const viewers = activeViewers.get(streamerId) || [];
+        socket.emit("viewers-list", viewers);
+    });
+
     socket.on("disconnect", () => {
         console.log(`❌ Socket desconectado: ${socket.id}`);
+        
+        // Remover espectador de la lista
+        if (socket.currentStreamerId) {
+            const viewers = activeViewers.get(socket.currentStreamerId);
+            if (viewers) {
+                const index = viewers.findIndex(v => v.socketId === socket.id);
+                if (index !== -1) {
+                    const removedViewer = viewers.splice(index, 1)[0];
+                    console.log(`👋 ${removedViewer.userName} salió del chat de ${socket.currentStreamerId} (${viewers.length} espectadores)`);
+                    
+                    // Notificar la lista actualizada
+                    io.to(`chat_${socket.currentStreamerId}`).emit("viewers-updated", viewers);
+                    
+                    // Limpiar si no hay espectadores
+                    if (viewers.length === 0) {
+                        activeViewers.delete(socket.currentStreamerId);
+                    }
+                }
+            }
+        }
     });
 });
 
